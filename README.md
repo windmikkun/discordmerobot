@@ -10,6 +10,7 @@ v1では「メロポイント」に対応しています。
 - **ポイント付与**: `/give` - 他ユーザーにポイントを送信
 - **残高確認**: `/points` - 自分や他ユーザーのポイント残高を確認
 - **ランキング表示**: `/leaderboard` - サーバー内のポイントランキングを表示
+- **ルール同意**: `/setup-rules-agree` - 新規参加者のMemberロール自動付与
 
 v1では「メロポイント」のみ対応しています。将来の拡張で複数のポイント種に対応する予定です。
 
@@ -49,6 +50,8 @@ Windowsでの安定動作：Visual Studio Build Toolsは不要です。sqlite3 +
 | `CLIENT_ID` | ✅ | DiscordアプリケーションのクライアントID | `123456789012345678` |
 | `GUILD_ID` | ❌ | 開発用サーバーID（指定すると即反映） | `987654321098765432` |
 | `DATABASE_PATH` | ❌ | SQLiteデータベースファイルのパス | `./data/bot.sqlite` |
+| `MEMBER_ROLE_ID` | ✅ | ルール同意時に付与するMemberロールID | `123456789012345678` |
+| `AGREE_CHANNEL_ID` | ✅ | 同意ボタンを設置するチャンネルID | `987654321098765432` |
 
 ### Discordトークンの取得方法
 
@@ -111,6 +114,38 @@ npm run dev
 /leaderboard               # デフォルト（mero/10件）
 /leaderboard type:mero limit:5  # meroポイント上位5件
 ```
+
+### `/setup-rules-agree` - ルール同意設定（管理者のみ）
+ルール同意メッセージを設置します。
+
+```bash
+/setup-rules-agree channel:#agree
+```
+
+- `channel`: 設置先チャンネル（未指定ならAGREE_CHANNEL_IDを使用）
+
+## 📋 ルール同意機能
+
+### 🎯 機能概要
+新規参加者がルールに同意すると自動的にMemberロールを付与する機能です。
+
+### 🔄 利用フロー
+1. 管理者が `/setup-rules-agree` で同意メッセージを設置
+2. 新規参加者が「✅ 同意する」ボタンをクリック
+3. BotがMemberロールを自動付与
+4. 参加者は通常チャンネルにアクセス可能に
+
+### ⚙️ 必要な設定
+- **Bot権限**: ロール管理権限が必要
+- **ロール位置**: BotのロールがMemberロールより上にあること
+- **チャンネル設定**: 
+  - @everyone: #rulesと#agreeのみ閲覧可能
+  - Member: 通常チャンネル閲覧・送信可能（#agreeは非表示）
+
+### 🚨 注意点
+- Botに管理者権限は不要ですが、ロール管理権限は必須です
+- MEMBER_ROLE_IDとAGREE_CHANNEL_IDの正確な設定が必要です
+- 既にMemberロールを持つユーザーがボタンを押しても何も起こりません
 
 ## 📝 仕様メモ（v1）
 
