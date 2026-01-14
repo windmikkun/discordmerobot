@@ -181,3 +181,133 @@ v1では「メロポイント」を実装し、将来ポイント種を追加し
 
 - ポイント種追加は `point_types` に行を追加することで可能にする
 - /give は `type` を受け取れる設計にしておく（v1では meroのみ有効でもよい）
+
+----------------------------------------------------------------------------------------------------------------
+# SPEC: Rules Agreement (Member Role Assignment) for Mero Bot
+
+## 1. 概要
+既存の Mero Bot に「ルール同意（ボタン）」機能を追加する。
+新規参加者は Member ロールが無い状態で参加し、#rules を読んだあと #agree の同意ボタンを押すと Bot が Member ロールを付与する。
+既存メンバー（すでに Member ロールを持つユーザー）は追加操作不要。
+
+## 2. ゴール
+- 新規参加者に Member ロールを自動付与できる
+- 既存メンバーは何もしなくて良い
+- Bot 停止/再起動に強い（ボタンは永続的に動作する）
+- Admin が /setup で同意メッセージを1回で設置できる
+
+## 3. 非ゴール
+- CAPTCHA、外部認証、電話番号認証など高度なスパム対策は対象外
+- ルール文言の自動生成は対象外（運営が自由に編集できるようにする）
+- 複数サーバー対応は必須ではない（必要なら後で拡張）
+
+## 4. 権限設計（前提）
+- @everyone: ルール閲覧と同意チャンネル閲覧のみ（送信不可）
+- Member: 通常チャンネル閲覧/送信可（#agree は見えない想定）
+- Admin: 全権限
+
+Bot 側の前提:
+- Bot のロールは「Member ロールより上」に配置されていること
+- Bot に「ロール管理」権限があること（Member付与のため）
+- Bot は管理者権限を持たない（原則）
+
+## 5. ユースケース
+
+### UC-1 新規参加 → ルール同意
+1) ユーザーがサーバー参加（Member無し）
+2) ユーザーは #rules を閲覧
+3) ユーザーは #agree で「同意する」ボタンを押す
+4) Bot が Member ロールを付与
+5) Bot が ephemeral で「同意ありがとう。Memberを付与しました。」と返す
+6) 以後、通常チャンネルにアクセス可能になる
+
+### UC-2 既存メンバーがボタンを押した場合
+- 既に Member ロールを持っていたら何もしない（または「すでに同意済みです」と返す）
+
+### UC-3 設定ミス（Memberロールが見つからない / Botが付与できない）
+- Bot は ephemeral でエラーを通知し、ログにも記録する
+
+## 6. UI/メッセージ仕様
+
+### #agree に設置するメッセージ（Embed + Button）
+Embed:
+- タイトル: 「📜 サーバールールへの同意」
+- 説明:
+  - 「#rules を確認のうえ、下のボタンで同意してください」
+  - 「同意後、自動的に Member ロールが付与されます」
+
+Button:
+- ラベル: 「✅ 同意する」
+- customId: `rules_agree`
+
+（任意）
+- 2回目以降押せないようにする必要はない（Memberは#agreeを見えなくしておく想定）
+
+## 7. Slash Command 仕様（Adminのみ）
+
+### /setup-rules-agree
+目的:
+- #agree に同意メッセージ（Embed + Button）を投稿する
+
+オプション:
+- channel (任意): 投稿先チャンネルID指定。未指定なら ENV の AGREE_CHANNEL_ID を使用。
+
+期待動作:
+- 既に設置済みでも実行可能（再設置可）
+- 実行結果を ephemeral で返す（「設置しました」）
+
+権限:
+- Admin ロールのみ実行可（または Discord の Administrator / ManageGuild を条件に）
+
+## 8. 設定（環境変数）
+必須:
+- DISCORD_TOKEN
+- GUILD_ID（ギルド限定コマンド登録用。既存Botで既にあるなら流用）
+- MEMBER_ROLE_ID（付与する Member ロールID）
+- AGREE_CHANNEL_ID（同意ボタンを設置するチャンネルID）
+
+任意:
+- RULES_CHANNEL_ID（#rulesへの導線を出すための表示用）
+- LOG_CHANNEL_ID（運営ログを流したい場合）
+
+## 9. 実装要件（Discord.js v14想定）
+- InteractionCreate イベントで ButtonInteraction を処理
+- `customId === "rules_agree"` のとき Member ロールを付与
+- Member付与前に以下をチェック:
+  - 対象が guild 内メンバーである
+  - MEMBER_ROLE_ID が存在する
+  - Bot がロール付与できる（role position / permissions）
+- ロール付与後は ephemeral で成功メッセージ
+- 既にロールを持っている場合は ephemeral で「すでに付与済み」
+- 例外は握りつぶさずログ出力
+
+## 10. データ保存
+必須ではない（Discordのロールが状態となるため）。
+ただし運営上の監査目的で保存したい場合のみ、SQLite に下記テーブルを追加してもよい。
+
+### (任意) テーブル: rules_agreements
+- id: integer (pk)
+- guild_id: text
+- user_id: text
+- agreed_at: datetime (ISO)
+
+※この保存は「付与成功時のみ」insert。
+
+## 11. テスト観点（手動）
+- 新規アカウントで参加（Memberなし）
+  - #rules と #agree は見える
+  - 通常チャンネルは見えない
+  - ボタン押下 → Member付与 → 通常チャンネルが見える
+- 既存メンバーでボタン押下
+  - すでに付与済みと返る
+- MEMBER_ROLE_ID を間違えたとき
+  - エラーがephemeralで返る
+- Botロールが Member より下のとき
+  - 付与できずエラーが返る（運用で気づける）
+
+## 12. 実装タスク（Windsurf向け）
+1) ENV 追加: MEMBER_ROLE_ID / AGREE_CHANNEL_ID
+2) スラッシュコマンド追加: /setup-rules-agree (admin only)
+3) ボタン処理追加: customId `rules_agree`
+4) (任意) DB: rules_agreements テーブル追加 + insert
+5) README にセットアップ手順追記（ロール位置/権限の注意含む）
