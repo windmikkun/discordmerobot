@@ -42,6 +42,41 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
+  // チャンネル権限チェック
+  if (!targetChannel.permissionsFor(interaction.client.user)?.has('SendMessages')) {
+    await interaction.reply({ 
+      content: '❌ Botにこのチャンネルへの送信権限がありません。', 
+      ephemeral: true 
+    });
+    return;
+  }
+
+  // 二重投稿チェック（直近のメッセージを確認）
+  try {
+    const messages = await targetChannel.messages.fetch({ limit: 10 });
+    const existingMessage = messages.find(msg => 
+      msg.author.bot && 
+      msg.components.some((row: any) => 
+        row.components && 
+        row.components.some((component: any) => 
+          component.type === 2 && // Button
+          component.customId === 'rules_agree'
+        )
+      )
+    );
+
+    if (existingMessage) {
+      await interaction.reply({ 
+        content: '⚠️ このチャンネルには既に同意メッセージが設置されています。', 
+        ephemeral: true 
+      });
+      return;
+    }
+  } catch (fetchError) {
+    console.warn('Failed to check existing messages:', fetchError);
+    // チェック失敗でも続行
+  }
+
   // Embed作成
   const embed = new EmbedBuilder()
     .setTitle('📜 サーバールールへの同意')
@@ -60,15 +95,29 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
 
   try {
+    // 通常メッセージとして投稿（全員に見える）
     await targetChannel.send({ embeds: [embed], components: [row] });
+    
+    // 管理者にのみephemeralで通知
     await interaction.reply({ 
       content: `✅ ${targetChannel} に同意メッセージを設置しました`, 
       ephemeral: true 
     });
   } catch (error) {
     console.error('Failed to setup rules agree message:', error);
+    
+    let errorMessage = '❌ メッセージの設置に失敗しました';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Missing Permissions')) {
+        errorMessage = '❌ Botにメッセージ送信権限がありません。';
+      } else if (error.message.includes('Missing Access')) {
+        errorMessage = '❌ Botにチャンネルへのアクセス権限がありません。';
+      }
+    }
+    
     await interaction.reply({ 
-      content: '❌ メッセージの設置に失敗しました。Botの権限を確認してください。', 
+      content: errorMessage, 
       ephemeral: true 
     });
   }
