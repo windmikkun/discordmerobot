@@ -4,6 +4,18 @@ import { PointType, BalanceRow, TransactionInsert } from './types.js';
 export class PointsRepository {
   constructor(private db: Database) {}
 
+  async runInTransaction<T>(callback: (db: Database) => Promise<T>): Promise<T> {
+    await this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = await callback(this.db);
+      await this.db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      await this.db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
   async getPointType(typeKey: string): Promise<PointType | null> {
     const row = await this.db.get(
       'SELECT key, name, daily_limit_count, is_enabled FROM point_types WHERE key = ?',

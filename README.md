@@ -11,6 +11,8 @@ v1では「メロポイント」に対応しています。
 - **残高確認**: `/points` - 自分や他ユーザーのポイント残高を確認
 - **ランキング表示**: `/leaderboard` - サーバー内のポイントランキングを表示
 - **ルール同意**: `/setup-rules-agree` - 新規参加者のMemberロール自動付与
+- **配信ポイント**: VC配信・視聴で自動的にポイント付与
+- **投げ銭**: `/tip` - 配信者に配信ポイントを投げ銭
 
 v1では「メロポイント」のみ対応しています。将来の拡張で複数のポイント種に対応する予定です。
 
@@ -52,6 +54,13 @@ Windowsでの安定動作：Visual Studio Build Toolsは不要です。sqlite3 +
 | `DATABASE_PATH` | ❌ | SQLiteデータベースファイルのパス | `./data/bot.sqlite` |
 | `MEMBER_ROLE_ID` | ✅ | ルール同意時に付与するMemberロールID | `123456789012345678` |
 | `AGREE_CHANNEL_ID` | ✅ | 同意ボタンを設置するチャンネルID | `987654321098765432` |
+| `STREAM_ENABLED` | ❌ | 配信ポイント機能を有効化（true/false） | `true` |
+| `STREAM_POINT_TICK_SECONDS` | ❌ | ポイント付与間隔（秒） | `60` |
+| `STREAM_VIEWER_POINT_PER_MIN` | ❌ | 視聴者への1分あたりポイント | `1` |
+| `STREAM_STREAMER_POINT_PER_MIN` | ❌ | 配信者への1分あたりポイント | `2` |
+| `STREAM_MIN_HUMANS_IN_VC` | ❌ | ポイント付与の最小人数 | `2` |
+| `STREAM_TIP_MAX_AMOUNT` | ❌ | 投げ銭の最大額 | `1000` |
+| `LOG_LEVEL` | ❌ | ログレベル（debug/info/warn/error） | `info` |
 
 ### Discordトークンの取得方法
 
@@ -113,7 +122,52 @@ npm run dev
 ```bash
 /leaderboard               # デフォルト（mero/10件）
 /leaderboard type:mero limit:5  # meroポイント上位5件
+/leaderboard type:stream limit:10  # 配信ポイント上位10件
 ```
+
+### `/tip` - 投げ銭
+配信中のユーザーに配信ポイントを投げ銭します。
+
+```bash
+/tip to:@streamer amount:100 message:"面白い配信です！"
+```
+
+- `to`: 投げ銭先ユーザー（必須）
+- `amount`: 投げ銭額（1〜STREAM_TIP_MAX_AMOUNT）
+- `message`: メッセージ（任意）
+
+**投げ銭条件**:
+- 同じボイスチャンネルにいる必要がある
+- 投げ銭先が配信中である必要がある
+- 自分自身やBotには投げ銭できない
+- 配信ポイントの残高が必要
+
+## 📋 配信ポイント機能
+
+### 🎯 機能概要
+VCでの配信活動を自動的に検出し、配信者と視聴者にポイントを付与する機能です。
+
+### 🔄 自動付与条件
+- VCに2人以上の人間ユーザーがいる
+- 配信者がstreaming状態になっている
+- STREAM_ENABLEDがtrueに設定されている
+
+### 📊 ポイント付与量
+- **配信者**: STREAM_STREAMER_POINT_PER_MIN（デフォルト: 2/分）
+- **視聴者**: STREAM_VIEWER_POINT_PER_MIN（デフォルト: 1/分）
+
+### ⚙️ 必要な設定
+- **Bot権限**: 
+  - GuildVoiceStates（配信状態検出）
+  - GuildMembers（VCメンバー検出）
+- **環境変数**: STREAM関連の変数を全て設定
+
+### 🎮 使い方
+1. VCで配信を開始（DiscordのGo Live機能）
+2. 視聴者がVCに参加
+3. 自動的にポイントが付与される
+4. `/points type:stream` で残高確認
+5. `/tip` で配信者に投げ銭
 
 ### `/setup-rules-agree` - ルール同意設定（管理者のみ）
 ルール同意メッセージを設置します。

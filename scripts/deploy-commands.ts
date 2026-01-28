@@ -4,6 +4,7 @@ import { Routes } from 'discord-api-types/v10';
 import { data as giveData } from '../src/commands/give.js';
 import { data as pointsData } from '../src/commands/points.js';
 import { data as leaderboardData } from '../src/commands/leaderboard.js';
+import { data as tipData } from '../src/commands/tip.js';
 import { data as setupRulesAgreeData } from '../src/commands/setupRulesAgree.js';
 
 const token = process.env.DISCORD_TOKEN;
@@ -19,7 +20,7 @@ if (!clientId) {
 }
 
 const rest = new REST({ version: '10' }).setToken(token);
-const commands = [giveData, pointsData, leaderboardData, setupRulesAgreeData].map((cmd) => cmd.toJSON());
+const commands = [giveData, pointsData, leaderboardData, tipData, setupRulesAgreeData].map((cmd) => cmd.toJSON());
 
 async function main() {
   if (guildId) {

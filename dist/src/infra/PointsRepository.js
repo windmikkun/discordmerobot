@@ -2,6 +2,18 @@ export class PointsRepository {
     constructor(db) {
         this.db = db;
     }
+    async runInTransaction(callback) {
+        await this.db.exec('BEGIN IMMEDIATE');
+        try {
+            const result = await callback(this.db);
+            await this.db.exec('COMMIT');
+            return result;
+        }
+        catch (error) {
+            await this.db.exec('ROLLBACK');
+            throw error;
+        }
+    }
     async getPointType(typeKey) {
         const row = await this.db.get('SELECT key, name, daily_limit_count, is_enabled FROM point_types WHERE key = ?', typeKey);
         if (!row)
