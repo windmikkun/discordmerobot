@@ -60,6 +60,7 @@ Windowsでの安定動作：Visual Studio Build Toolsは不要です。sqlite3 +
 | `STREAM_STREAMER_POINT_PER_MIN` | ❌ | 配信者への1分あたりポイント | `2` |
 | `STREAM_MIN_HUMANS_IN_VC` | ❌ | ポイント付与の最小人数 | `2` |
 | `STREAM_TIP_MAX_AMOUNT` | ❌ | 投げ銭の最大額 | `1000` |
+| `LOG_LEVEL` | ❌ | ログレベル（debug/info/warn/error） | `info` |
 
 ### Discordトークンの取得方法
 
@@ -157,7 +158,7 @@ VCでの配信活動を自動的に検出し、配信者と視聴者にポイン
 
 ### ⚙️ 必要な設定
 - **Bot権限**: 
-  - GuildPresences（配信状態検出）
+  - GuildVoiceStates（配信状態検出）
   - GuildMembers（VCメンバー検出）
 - **環境変数**: STREAM関連の変数を全て設定
 
@@ -167,6 +168,38 @@ VCでの配信活動を自動的に検出し、配信者と視聴者にポイン
 3. 自動的にポイントが付与される
 4. `/points type:stream` で残高確認
 5. `/tip` で配信者に投げ銭
+
+### `/setup-rules-agree` - ルール同意設定（管理者のみ）
+ルール同意メッセージを設置します。
+
+```bash
+/setup-rules-agree channel:#agree
+```
+
+- `channel`: 設置先チャンネル（未指定ならAGREE_CHANNEL_IDを使用）
+
+## 📋 ルール同意機能
+
+### 🎯 機能概要
+新規参加者がルールに同意すると自動的にMemberロールを付与する機能です。
+
+### 🔄 利用フロー
+1. 管理者が `/setup-rules-agree` で同意メッセージを設置
+2. 新規参加者が「✅ 同意する」ボタンをクリック
+3. BotがMemberロールを自動付与
+4. 参加者は通常チャンネルにアクセス可能に
+
+### ⚙️ 必要な設定
+- **Bot権限**: ロール管理権限が必要
+- **ロール位置**: BotのロールがMemberロールより上にあること
+- **チャンネル設定**: 
+  - @everyone: #rulesと#agreeのみ閲覧可能
+  - Member: 通常チャンネル閲覧・送信可能（#agreeは非表示）
+
+### 🚨 注意点
+- Botに管理者権限は不要ですが、ロール管理権限は必須です
+- MEMBER_ROLE_IDとAGREE_CHANNEL_IDの正確な設定が必要です
+- 既にMemberロールを持つユーザーがボタンを押しても何も起こりません
 
 ## 📝 仕様メモ（v1）
 
