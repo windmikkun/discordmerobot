@@ -48,11 +48,12 @@ async function createTables(db: Database) {
 }
 
 async function seedInitialData(db: Database) {
-  const exists = await db.get(
+  // meroポイントの初期化
+  const meroExists = await db.get(
     'SELECT 1 FROM point_types WHERE key = ? LIMIT 1',
     'mero'
   );
-  if (!exists) {
+  if (!meroExists) {
     await db.run(
       `
       INSERT INTO point_types (key, name, daily_limit_count, is_enabled)
@@ -61,6 +62,24 @@ async function seedInitialData(db: Database) {
       'mero',
       'メロポイント',
       10,
+      1
+    );
+  }
+
+  // streamポイントの初期化
+  const streamExists = await db.get(
+    'SELECT 1 FROM point_types WHERE key = ? LIMIT 1',
+    'stream'
+  );
+  if (!streamExists) {
+    await db.run(
+      `
+      INSERT INTO point_types (key, name, daily_limit_count, is_enabled)
+      VALUES (?, ?, ?, ?)
+    `,
+      'stream',
+      '配信ポイント',
+      0,
       1
     );
   }

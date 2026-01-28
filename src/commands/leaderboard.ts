@@ -14,7 +14,10 @@ export const data = new SlashCommandBuilder()
       .setName('type')
       .setDescription('ポイント種')
       .setRequired(false)
-      .addChoices({ name: 'メロポイント', value: 'mero' }),
+      .addChoices(
+        { name: 'メロポイント', value: 'mero' },
+        { name: '配信ポイント', value: 'stream' },
+      ),
   )
   .addIntegerOption((option: SlashCommandIntegerOption) =>
     option
@@ -58,7 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction, service:
 
   const message = [
     '🏆 ポイントランキング',
-    `種別: ${typeKey === 'mero' ? 'メロポイント' : typeKey}`,
+    `種別: ${typeKey === 'mero' ? 'メロポイント' : typeKey === 'stream' ? '配信ポイント' : typeKey}`,
     rankingLines,
   ].join('\n');
 

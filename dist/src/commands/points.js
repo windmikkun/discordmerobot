@@ -10,7 +10,7 @@ export const data = new SlashCommandBuilder()
     .setName('type')
     .setDescription('ポイント種（未指定なら全種類）')
     .setRequired(false)
-    .addChoices({ name: 'メロポイント', value: 'mero' }));
+    .addChoices({ name: 'メロポイント', value: 'mero' }, { name: '配信ポイント', value: 'stream' }));
 export async function execute(interaction, service) {
     // guildIdチェック
     if (!interaction.guildId) {
@@ -34,7 +34,12 @@ export async function execute(interaction, service) {
         return;
     }
     // 残高表示整形
-    const balanceLines = rows.map(row => `- ${row.typeKey === 'mero' ? 'メロポイント' : row.typeKey}: ${row.balance}`).join('\n');
+    const balanceLines = rows.map(row => {
+        const pointName = row.typeKey === 'mero' ? 'メロポイント' :
+            row.typeKey === 'stream' ? '配信ポイント' :
+                row.typeKey;
+        return `- ${pointName}: ${row.balance}`;
+    }).join('\n');
     const message = [
         '📊 ポイント残高',
         `対象: <@${targetUser.id}>`,

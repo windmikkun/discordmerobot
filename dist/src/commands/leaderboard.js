@@ -6,7 +6,7 @@ export const data = new SlashCommandBuilder()
     .setName('type')
     .setDescription('ポイント種')
     .setRequired(false)
-    .addChoices({ name: 'メロポイント', value: 'mero' }))
+    .addChoices({ name: 'メロポイント', value: 'mero' }, { name: '配信ポイント', value: 'stream' }))
     .addIntegerOption((option) => option
     .setName('limit')
     .setDescription('表示件数')
@@ -39,7 +39,7 @@ export async function execute(interaction, service) {
     const rankingLines = rows.map((row, index) => `${index + 1}. <@${row.userId}> - ${row.balance}`).join('\n');
     const message = [
         '🏆 ポイントランキング',
-        `種別: ${typeKey === 'mero' ? 'メロポイント' : typeKey}`,
+        `種別: ${typeKey === 'mero' ? 'メロポイント' : typeKey === 'stream' ? '配信ポイント' : typeKey}`,
         rankingLines,
     ].join('\n');
     await interaction.reply({ content: message });
